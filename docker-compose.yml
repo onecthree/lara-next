@@ -1,0 +1,80 @@
+
+services:
+  redis:
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+    image: aaindonesia_redis
+    container_name: aaindonesia_redis_ct
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - app_network
+
+  backend:
+    build:
+      context: ./backend.prod
+      dockerfile: Dockerfile
+      args:
+        BACKEND_PORT: $BACKEND_PORT
+        PHP_FPM_PORT: $PHP_FPM_PORT
+    image: aaindonesia_backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    container_name: aaindonesia_backend_ct
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend.prod:/var/www/html
+    expose:
+      - $PHP_FPM_PORT
+    networks:
+      - app_network
+    depends_on:
+      - redis
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+      args:
+        BACKEND_PORT: $BACKEND_PORT
+        PHP_FPM_PORT: $PHP_FPM_PORT
+    image: aaindonesia_nginx
+    container_name: aaindonesia_nginx_ct
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    volumes:
+      - ./backend.prod:/var/www/html
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+  frontend:
+    build:
+      context: ./frontend.prod
+      dockerfile: Dockerfile
+      args:
+        FRONTEND_PORT: $FRONTEND_PORT
+        BACKEND_URL: $BACKEND_URL
+    image: aaindonesia_frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    container_name: aaindonesia_frontend_ct
+    restart: unless-stopped
+    working_dir: /web
+    volumes:
+      - ./frontend.prod:/web
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    networks:
+      - app_network
+    depends_on:
+      - nginx
+
+networks:
+  app_network:
+    driver: bridge
