@@ -77,4 +77,5 @@ services:
 
 networks:
   app_network:
+    name: aaindonesia_network
     driver: bridge
