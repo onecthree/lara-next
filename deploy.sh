@@ -4,8 +4,8 @@ echo ">> Hapus .env.docker..."
 rm .env.docker
 
 echo ">> Salin storage terakhir..."
-mkdir backend.tmp
-cp -r ./backend.prod/storage ./backend.tmp/
+mkdir -p backend.tmp/storage
+cp -r ./backend.prod/storage/app ./backend.tmp/storage/
 
 echo ">> Hapus backend.prod lama..."
 rm -rf backend.prod
@@ -24,9 +24,22 @@ rm ./backend.prod/.env
 mv ./backend.prod/.env.production ./backend.prod/.env
 
 echo ">> Timpa storage terakhir ke yang baru..."
-rm -rf ./backend.prod/storage
-cp -r ./backend.tmp/storage ./backend.prod/
+rm -rf ./backend.prod/storage/app
+cp -r ./backend.tmp/storage/app ./backend.prod/storage/
 rm -rf backend.tmp
+
+# -------------------
+
+echo ">> Hapus frontend.prod lama..."
+rm -rf frontend.prod
+
+echo ">> Salin frontend sebagai frontend.prod..."
+#cp -r frontend frontend.prod
+mkdir frontend.prod
+rsync -av --exclude 'node_modules' --exclude ".next"  --exclude ".git" ./frontend/ ./frontend.prod
+
+echo ">> Ubah [frontend] .env.production ke .env..."
+cp ./frontend.prod/.env.production ./frontend.prod/.env
 
 # -------------------
 
@@ -50,21 +63,9 @@ php ./backend.prod/artisan storage:link
 #exit
 # -------------------
 
-echo ">> Hapus frontend.prod lama..."
-rm -rf frontend.prod
-
-echo ">> Salin frontend sebagai frontend.prod..."
-#cp -r frontend frontend.prod
-mkdir frontend.prod
-rsync -av --exclude 'node_modules' --exclude ".next"  --exclude ".git" ./frontend/ ./frontend.prod
-
 echo ">> pnpm install & pnpm run build ..."
 cd frontend.prod && NODE_ENV=production pnpm install && NODE_ENV=production pnpm run build
 cd ../
-
-echo ">> Ubah [frontend] .env.production ke .env..."
-rm ./frontend.prod/.env
-cp ./frontend.prod/.env.production ./frontend.prod/.env
 
 echo ">> Composing frontend sebagai kontainer..."
 
